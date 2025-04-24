@@ -24,15 +24,15 @@ impl StateMachineContext for Context {
         Ok(Some(Events::ToD2))
     }
 
-    fn to_d3(&mut self, _state_data: &Option<Events>) -> Result<Option<Events>, ()> {
+    fn to_d3(&mut self, _state_data: &mut Option<Events>) -> Result<Option<Events>, ()> {
         Ok(Some(Events::ToD3))
     }
 
-    fn to_d4(&mut self, _state_data: &Option<Events>) -> Result<Option<Events>, ()> {
+    fn to_d4(&mut self, _state_data: &mut Option<Events>) -> Result<Option<Events>, ()> {
         Ok(Some(Events::ToD4))
     }
 
-    fn to_d5(&mut self, _state_data: &Option<Events>) -> Result<Option<Events>, ()> {
+    fn to_d5(&mut self, _state_data: &mut Option<Events>) -> Result<Option<Events>, ()> {
         Ok(Some(Events::ToD5))
     }
     fn transition_callback(&self, exit: &States, entry: &States) {

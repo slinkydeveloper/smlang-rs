@@ -46,7 +46,7 @@ impl StateMachineContext for Context {
     }
 
     // Action2 has access to the data from State2
-    fn action2(&mut self, state_data: &MyStateData) -> Result<(), ()> {
+    fn action2(&mut self, state_data: &mut MyStateData) -> Result<(), ()> {
         println!("Printing state data {:?}", state_data);
         Ok(())
     }

@@ -434,24 +434,25 @@ fn test_internal_transition_with_data() {
         Action44,
     }
     impl StateMachineContext for Context {
-        fn action_3(&mut self, d: &State3Data) -> Result<State3Data, ()> {
+        fn action_3(&mut self, d: &mut State3Data) -> Result<(), ()> {
             self.action = ActionId::Action3;
-            Ok(*d)
+            Ok(())
         }
 
-        fn action44(&mut self, _d: &State3Data) -> Result<State3Data, ()> {
+        fn action44(&mut self, d: &mut State3Data) -> Result<(), ()> {
             self.action = ActionId::Action44;
-            Ok(State3Data(ActionId::Action44))
+            *d = State3Data(ActionId::Action44);
+            Ok(())
         }
-        fn action14(&mut self, _d: &State1Data) -> Result<State3Data, ()> {
+        fn action14(&mut self, _d: &mut State1Data) -> Result<State3Data, ()> {
             self.action = ActionId::Action14;
             Ok(State3Data(ActionId::Action14))
         }
-        fn action12(&mut self, _d: &State1Data) -> Result<(), ()> {
+        fn action12(&mut self, _d: &mut State1Data) -> Result<(), ()> {
             self.action = ActionId::Action12;
             Ok(())
         }
-        fn action13(&mut self, _d: &State1Data) -> Result<State3Data, ()> {
+        fn action13(&mut self, _d: &mut State1Data) -> Result<State3Data, ()> {
             self.action = ActionId::Action13;
             Ok(State3Data(ActionId::Action13))
         }
@@ -522,6 +523,60 @@ fn test_wildcard_states_and_internal_transitions() {
     assert!(sm.process_event(Events::Event2).is_err()); // InvalidEvent
     assert_eq!(States::State3, sm.state);
 }
+
+#[test]
+fn test_internal_transition_and_mut_ref() {
+    #[derive(Debug, Clone, Copy)]
+    pub struct Data {
+        count: u32,
+    }
+
+    statemachine! {
+        transitions: {
+            *Init + Start / init = Inited(Data),
+            Inited(Data) + Count / count,
+            Inited(Data) + Count2 / count = _,
+            Inited(Data) + Count3 / count = Inited(Data),
+        },
+        states_attr: #[derive(Debug, Clone, Copy)]
+    }
+    #[derive(Debug)]
+    pub struct Context {
+        count: u32,
+    }
+    impl StateMachineContext for Context {
+        fn init(&mut self) -> Result<Data, ()> {
+            Ok(Data {
+                count: 0,
+            })
+        }
+
+        fn count(&mut self, state_data: &mut Data) -> Result<(), ()> {
+            self.count += 1;
+            state_data.count += 1;
+            Ok(())
+        }
+    }
+
+    let mut sm = StateMachine::new(Context { count: 0 });
+
+    assert_transition!(sm, Events::Start, States::Inited(Data {
+        count: 0,
+    }), 0);
+    assert_transition!(sm, Events::Count, States::Inited(Data {
+        count: 1,
+    }), 1);
+    assert_transition!(sm, Events::Count2, States::Inited(Data {
+        count: 2,
+    }), 2);
+    assert_transition!(sm, Events::Count3, States::Inited(Data {
+        count: 3,
+    }), 3);
+    assert_eq!(States::Inited(Data {
+        count: 3,
+    }), sm.state);
+}
+
 #[test]
 fn test_specify_attrs() {
     #![deny(non_camel_case_types)]

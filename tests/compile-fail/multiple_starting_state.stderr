@@ -5,8 +5,7 @@ error: More than one starting state defined (indicated with *), remove duplicate
 6  | |     transitions: {
 7  | |         //~ More than one starting state defined (indicated with *), remove duplicates.
 8  | |         *State1 + Event1 = State2,
-9  | |         *State2 + Event2 = State3,
-10 | |     }
+...  |
 11 | | }
    | |_^
    |

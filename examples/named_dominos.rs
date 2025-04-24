@@ -23,15 +23,15 @@ impl DominosStateMachineContext for Context {
         Ok(Some(DominosEvents::ToD2))
     }
 
-    fn to_d3(&mut self, _state_data: &Option<DominosEvents>) -> Result<Option<DominosEvents>, ()> {
+    fn to_d3(&mut self, _state_data: &mut Option<DominosEvents>) -> Result<Option<DominosEvents>, ()> {
         Ok(Some(DominosEvents::ToD3))
     }
 
-    fn to_d4(&mut self, _state_data: &Option<DominosEvents>) -> Result<Option<DominosEvents>, ()> {
+    fn to_d4(&mut self, _state_data: &mut Option<DominosEvents>) -> Result<Option<DominosEvents>, ()> {
         Ok(Some(DominosEvents::ToD4))
     }
 
-    fn to_d5(&mut self, _state_data: &Option<DominosEvents>) -> Result<Option<DominosEvents>, ()> {
+    fn to_d5(&mut self, _state_data: &mut Option<DominosEvents>) -> Result<Option<DominosEvents>, ()> {
         Ok(Some(DominosEvents::ToD5))
     }
 }

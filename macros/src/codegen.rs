@@ -79,7 +79,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 }
                 Some(_) => {
                     quote! {
-                        #state_name(ref state_data)
+                        #state_name(ref mut state_data)
                     }
                 }
             }
@@ -154,7 +154,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 .map(|(name, _)| {
                     let state_data = match sm.state_data.data_types.get(state_name) {
                         Some(Type::Reference(_)) => quote! { state_data },
-                        Some(_) => quote! { &state_data },
+                        Some(_) => quote! { state_data },
                         None => quote! {},
                     };
 
@@ -357,12 +357,21 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         .data_types
                         .get(&transition.out_state.to_string())
                     {
-                        quote! { Result<#output_data,#custom_error> }
+                        if transition.internal_transition || event_mapping.in_state.to_string() == transition.out_state.to_string() {
+                            // Empty return type
+                            quote! { Result<(), #custom_error> }
+                        } else {
+                            quote! { Result<#output_data,#custom_error> }
+                        }
                     } else {
                         // Empty return type
                         quote! { Result<(),#custom_error> }
                     };
-
+                    let state_data = match sm.state_data.data_types.get(state) {
+                        Some(st @ Type::Reference(_)) => quote! { state_data: #st, },
+                        Some(st) => quote! { state_data: &mut #st, },
+                        None => quote! {},
+                    };
                     let event_data = match sm.event_data.data_types.get(event) {
                         Some(et) => {
                             quote! { event_data: #et }
@@ -439,7 +448,6 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                                     // Stay in the same state => no need to call on_entry/on_exit
                                     quote!{
                                             #action_code
-                                            self.state = #states_type_name::#out_state;
                                             return Ok(&self.state);
                                         }
                                 } else {
