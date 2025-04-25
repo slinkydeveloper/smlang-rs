@@ -2,7 +2,7 @@
 
 use crate::parser::transition::visit_guards;
 use crate::parser::{lifetimes::Lifetimes, AsyncIdent, ParsedStateMachine};
-use proc_macro2::{ Span, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::Type;
 
@@ -62,6 +62,34 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
             },
         )
         .collect();
+
+    // For the on_[event] matching
+    let on_event_match: Vec<_> = sm.events.values()
+        .map(
+            |event_ident| {
+                let event_ident_str = event_ident.to_string();
+                let on_method_name = Ident::new(&format!("on_{}", string_morph::to_snake_case(&event_ident_str)), event_ident.span());
+
+                match sm.event_data.data_types.get(&event_ident_str) {
+                    None => {
+                        quote! {
+                            #events_type_name::#event_ident => self.context.#on_method_name(event_handling_context)?
+                        }
+                    }
+                    Some(_) => {
+                        quote! {
+                            #events_type_name::#event_ident(event_data) => self.context.#on_method_name(event_handling_context, event_data)?
+                        }
+                    }
+                }
+            },
+        )
+        .collect();
+    let on_event_match = quote! {
+            match &event {
+                 #(#on_event_match),*
+            };
+    };
 
     let transitions = &sm.states_events_mapping;
 
@@ -239,6 +267,40 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
     let mut guard_list = proc_macro2::TokenStream::new();
     let mut action_list = proc_macro2::TokenStream::new();
 
+    let mut on_event_list = proc_macro2::TokenStream::new();
+    for event_ident in sm.events.values() {
+        let event_ident_str = event_ident.to_string();
+        let mut all_lifetimes = Lifetimes::new();
+        all_lifetimes.extend(
+            &sm.event_data
+                .lifetimes
+                .get(&event_ident_str)
+                .cloned()
+                .unwrap_or_default(),
+        );
+        let on_method_name = Ident::new(
+            &format!("on_{}", string_morph::to_snake_case(&event_ident_str)),
+            event_ident.span(),
+        );
+
+        let event_data = match sm.event_data.data_types.get(&event_ident_str) {
+            None => {
+                quote! {}
+            }
+            Some(t) => {
+                quote! { event_data: & #t }
+            }
+        };
+
+        on_event_list.extend(quote! {
+            #[allow(missing_docs)]
+            #[allow(clippy::unused_unit)]
+            fn #on_method_name <#all_lifetimes> (&self, event_handling_context: &mut EventHandlingContext, #event_data) -> Result<(), Self::Error> {
+                Ok(())
+            }
+        });
+    }
+
     let mut entries_exits = proc_macro2::TokenStream::new();
 
     for (state, event_mappings) in transitions.iter() {
@@ -341,7 +403,9 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                         .data_types
                         .get(&transition.out_state.to_string())
                     {
-                        if transition.internal_transition || event_mapping.in_state.to_string() == transition.out_state.to_string() {
+                        if transition.internal_transition
+                            || event_mapping.in_state == transition.out_state
+                        {
                             // Empty return type
                             quote! { Result<(), Self::Error> }
                         } else {
@@ -527,6 +591,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
 
             #guard_list
             #action_list
+            #on_event_list
             #entries_exits
 
             /// Called when an event is processed which should not come in the current state.
@@ -633,7 +698,8 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
                 event: #events_type_name <#event_lifetimes>
             ) -> Result<&#states_type_name <#state_lifetimes>, <T as #state_machine_context_type_name>::Error> {
                 self.context.log_process_event(self.state(), &event);
-               match self.state {
+                #on_event_match
+                match self.state {
                     #(
                     #[allow(clippy::match_single_binding)]
                     #states_type_name::#in_states => match event {
@@ -653,10 +719,7 @@ pub fn generate_code(sm: &ParsedStateMachine) -> proc_macro2::TokenStream {
         }
     }
 }
-fn generate_action(
-    action: &Option<AsyncIdent>,
-    g_a_param: &TokenStream,
-) -> (bool, TokenStream) {
+fn generate_action(action: &Option<AsyncIdent>, g_a_param: &TokenStream) -> (bool, TokenStream) {
     let mut is_async = false;
     let code = if let Some(AsyncIdent {
         ident: action_ident,

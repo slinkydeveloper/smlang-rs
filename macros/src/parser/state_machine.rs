@@ -1,5 +1,5 @@
 use super::transition::{StateTransition, StateTransitions};
-use syn::{braced, parse, spanned::Spanned, token, Attribute, Ident, Token, Type};
+use syn::{braced, parse, token, Attribute, Ident, Token};
 
 #[derive(Debug)]
 pub struct StateMachine {

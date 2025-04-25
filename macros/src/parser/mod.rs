@@ -16,7 +16,7 @@ use proc_macro2::{Span, TokenStream};
 use crate::parser::event::Transition;
 use std::collections::{hash_map, HashMap};
 use std::fmt;
-use syn::{parse, Attribute, Ident, Type};
+use syn::{parse, Attribute, Ident};
 use transition::StateTransition;
 pub type TransitionMap = HashMap<String, HashMap<String, EventMapping>>;
 
@@ -76,7 +76,7 @@ fn add_transition(
                     guard: transition.guard.clone(),
                     action: transition.action.clone(),
                     out_state: transition.out_state.ident.clone(),
-                    internal_transition: transition.out_state.internal_transition
+                    internal_transition: transition.out_state.internal_transition,
                 }],
             };
             entry.insert(mapping);
@@ -87,7 +87,7 @@ fn add_transition(
                 guard: transition.guard.clone(),
                 action: transition.action.clone(),
                 out_state: transition.out_state.ident.clone(),
-                internal_transition: transition.out_state.internal_transition
+                internal_transition: transition.out_state.internal_transition,
             });
         }
     }
