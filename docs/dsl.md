@@ -18,10 +18,8 @@ statemachine!{
     // the second argument.
     temporary_context: u32,
 
-    // [Optional] Can be optionally specified to add a new `type Error` to the
-    // generated `StateMachineContext` trait to allow guards to return a custom
-    // error type instead of `()`.
-    custom_error: false,
+    // The generated `StateMachineContext` trait includes a `type Error` that allows
+    // guards and actions to return a custom error type.
 
     // [Optional] A list of attributes for the generated `States` and `Events`
     // enumerations respectively. For example, to `#[derive(Debug)]` and `#[repr(u8)], these

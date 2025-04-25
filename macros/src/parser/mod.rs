@@ -48,8 +48,6 @@ pub struct ParsedStateMachine {
     pub name: Option<Ident>,
     pub states_attr: Vec<Attribute>,
     pub events_attr: Vec<Attribute>,
-    pub temporary_context_type: Option<Type>,
-    pub custom_error: bool,
     pub states: HashMap<String, Ident>,
     pub starting_state: Ident,
     pub state_data: DataDefinitions,
@@ -102,7 +100,7 @@ fn add_transition(
         // This transition goes to a state that has data associated, check so it has an
         // action
 
-        if transition.action.is_none() {
+        if transition.action.is_none() && !transition.out_state.internal_transition {
             return Err(parse::Error::new(
                 transition.out_state.ident.span(),
                 "This state has data associated, but not action is define here to provide it.",
@@ -247,8 +245,6 @@ impl ParsedStateMachine {
             name: sm.name,
             states_attr: sm.states_attr,
             events_attr: sm.events_attr,
-            temporary_context_type: sm.temporary_context_type,
-            custom_error: sm.custom_error,
             states,
             starting_state,
             state_data,

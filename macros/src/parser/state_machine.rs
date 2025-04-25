@@ -3,8 +3,6 @@ use syn::{braced, parse, spanned::Spanned, token, Attribute, Ident, Token, Type}
 
 #[derive(Debug)]
 pub struct StateMachine {
-    pub temporary_context_type: Option<Type>,
-    pub custom_error: bool,
     pub transitions: Vec<StateTransition>,
     pub name: Option<Ident>,
     pub states_attr: Vec<Attribute>,
@@ -15,8 +13,6 @@ pub struct StateMachine {
 impl StateMachine {
     pub fn new() -> Self {
         StateMachine {
-            temporary_context_type: None,
-            custom_error: false,
             transitions: Vec::new(),
             name: None,
             states_attr: Vec::new(),
@@ -74,36 +70,6 @@ impl parse::Parse for StateMachine {
                         }
                     }
                 }
-                "custom_error" => {
-                    input.parse::<Token![:]>()?;
-                    let custom_error: syn::LitBool = input.parse()?;
-                    if custom_error.value {
-                        statemachine.custom_error = true
-                    }
-                }
-                "temporary_context" => {
-                    input.parse::<Token![:]>()?;
-                    let temporary_context_type: Type = input.parse()?;
-
-                    // Check so the type is supported
-                    match &temporary_context_type {
-                        Type::Array(_)
-                        | Type::Path(_)
-                        | Type::Ptr(_)
-                        | Type::Reference(_)
-                        | Type::Slice(_)
-                        | Type::Tuple(_) => (),
-                        _ => {
-                            return Err(parse::Error::new(
-                                temporary_context_type.span(),
-                                "This is an unsupported type for the temporary state.",
-                            ))
-                        }
-                    }
-
-                    // Store the temporary context type
-                    statemachine.temporary_context_type = Some(temporary_context_type);
-                }
                 "name" => {
                     input.parse::<Token![:]>()?;
                     statemachine.name = Some(input.parse::<Ident>()?);
@@ -133,8 +99,6 @@ impl parse::Parse for StateMachine {
                         format!(
                             "Unknown keyword {}. Support keywords: [\"name\", \
                                 \"transitions\", \
-                                \"temporary_context\", \
-                                \"custom_error\", \
                                 \"states_attr\", \
                                 \"events_attr\", \
                                 \"entry_exit_async\"
